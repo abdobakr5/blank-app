@@ -7,11 +7,11 @@ import numpy as np
 
 st.set_page_config(layout="wide", page_title="💼 Job Listings Analysis Dashboard")
 
-
 # Load data
 @st.cache_data
 def load_data():
-    return pd.read_excel("Job_cleaned.xlsx")
+    df = pd.read_excel("Job_cleaned.xlsx")
+    return df
 
 df = load_data()
 
@@ -19,13 +19,19 @@ st.title("Job Listings Analysis Dashboard")
 
 # Sidebar Filters
 st.sidebar.header("Filters")
-city_filter = st.sidebar.multiselect("Select Cities:", df['city'].dropna().unique(), default=df['city'].dropna().unique())
-program_filter = st.sidebar.multiselect("Select Programs:", df['program'].dropna().unique(), default=df['program'].dropna().unique())
-shift_filter = st.sidebar.multiselect("Select Shifts:", df['shift'].dropna().unique(), default=df['shift'].dropna().unique())
+
+# Get the actual column names
+available_cities = df['work_location'].dropna().unique()
+available_programs = df['program'].dropna().unique()
+available_shifts = df['shift'].dropna().unique()
+
+city_filter = st.sidebar.multiselect("Select Locations:", available_cities, default=available_cities)
+program_filter = st.sidebar.multiselect("Select Programs:", available_programs, default=available_programs)
+shift_filter = st.sidebar.multiselect("Select Shifts:", available_shifts, default=available_shifts)
 
 # Apply filters
 df_filtered = df[
-    df['city'].isin(city_filter) & 
+    df['work_location'].isin(city_filter) & 
     df['program'].isin(program_filter) &
     df['shift'].isin(shift_filter)
 ]
@@ -48,8 +54,8 @@ ax2.axis("off")
 st.pyplot(fig2)
 
 # Distribution by City
-st.subheader("Job Distribution by City")
-top_cities = df_filtered['city'].value_counts().nlargest(6)
+st.subheader("Job Distribution by Location")
+top_cities = df_filtered['work_location'].value_counts().nlargest(6)
 fig3, ax3 = plt.subplots()
 ax3.pie(top_cities, labels=top_cities.index, autopct='%.1f%%', startangle=140, colors=sns.color_palette('pastel'))
 ax3.axis('equal')
@@ -77,20 +83,6 @@ ax4.legend(patches, legend_labels,
 ax4.axis('equal')
 plt.tight_layout()
 st.pyplot(fig4)
-
-# Heatmap: Program by City
-st.subheader("Program Distribution by City")
-top5_cities = df_filtered['city'].value_counts().nlargest(5).index
-pivot = df_filtered[df_filtered['city'].isin(top5_cities)].pivot_table(
-    index='city', 
-    columns='program', 
-    aggfunc='size', 
-    fill_value=0
-)
-fig5, ax5 = plt.subplots(figsize=(12, 6))
-sns.heatmap(pivot, annot=True, fmt='d', cmap="YlGnBu", ax=ax5)
-ax5.set_title("Program Distribution Across Top 5 Cities")
-st.pyplot(fig5)
 
 # Posting Trend Line Chart
 st.subheader("Job Postings Over Time")
@@ -138,3 +130,18 @@ ax7.set_title("Distribution of Minimum Experience Requirements")
 plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig7)
+
+# Add back the Program Distribution Heatmap
+st.subheader("Program Distribution by City")
+top5_cities = df_filtered['work_location'].value_counts().nlargest(5).index
+pivot = df_filtered[df_filtered['work_location'].isin(top5_cities)].pivot_table(
+    index='work_location', 
+    columns='program', 
+    aggfunc='size', 
+    fill_value=0
+)
+fig5, ax5 = plt.subplots(figsize=(12, 6))
+sns.heatmap(pivot, annot=True, fmt='d', cmap="YlGnBu", ax=ax5)
+ax5.set_title("Program Distribution Across Top 5 Cities")
+plt.tight_layout()
+st.pyplot(fig5)
